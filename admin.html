@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>买手预购工作台</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --rose:#db5c7a; --rose-d:#c2446a; --rose-l:#fbe9ef; --rose-ll:#fff5f8;
+    --ink:#3a2b30; --sub:#8a7680; --line:#f0d8e0; --ok:#3fae7a; --warn:#e08a3c;
+    --bg:#fff5f8; --card:#ffffff; --shadow:0 6px 20px rgba(219,92,122,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;
+    padding-bottom:calc(80px + env(safe-area-inset-bottom));}
+  .top{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--rose),var(--rose-d));
+    color:#fff;padding:14px 16px;box-shadow:var(--shadow)}
+  .top h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.5px}
+  .top p{margin:2px 0 0;font-size:12px;opacity:.9}
+  .tabs{position:sticky;top:62px;z-index:19;display:flex;background:#fff;border-bottom:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:12px 4px;font-size:14px;color:var(--sub);
+    border-bottom:2px solid transparent;cursor:pointer}
+  .tab.on{color:var(--rose-d);border-bottom-color:var(--rose);font-weight:600}
+  .page{display:none;padding:16px;max-width:760px;margin:0 auto}
+  .page.on{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 12px;font-size:15px;color:var(--rose-d);display:flex;align-items:center;gap:6px}
+  label{display:block;font-size:13px;color:var(--sub);margin:10px 0 6px}
+  input[type=text],input[type=url],input[type=number],textarea,select{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-size:15px;color:var(--ink);background:var(--rose-ll);outline:none;font-family:inherit}
+  input:focus,textarea:focus{border-color:var(--rose);background:#fff}
+  textarea{resize:vertical;min-height:80px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:120px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--rose);color:#fff;border:none;border-radius:10px;padding:11px 16px;
+    font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:#fff;color:var(--rose-d);border:1px solid var(--rose)}
+  .btn.sm{padding:7px 12px;font-size:13px}
+  .btn.block{width:100%}
+  .btn.danger{background:#fff;color:#d9534f;border:1px solid #f0c5c2}
+  .hint{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.5}
+  .pd{padding:14px;border:1px dashed var(--line);border-radius:12px;margin-bottom:12px;background:var(--rose-ll)}
+  .pd .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .pd .ph b{font-size:14px;color:var(--rose-d)}
+  .del{color:#d9534f;font-size:13px;cursor:pointer;background:none;border:none;padding:4px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);
+    border-radius:20px;padding:5px 10px;margin:4px 6px 4px 0;font-size:13px}
+  .chip .dot{width:14px;height:14px;border-radius:50%;border:1px solid var(--line)}
+  .chip .x{cursor:pointer;color:#d9534f;font-weight:700}
+  .swatch{width:60px;height:34px;border-radius:8px;border:1px solid var(--line)}
+  .preview{font-size:12px;color:var(--sub);margin-top:6px;word-break:break-all;
+    background:var(--rose-ll);border-radius:8px;padding:8px}
+  .linkbox{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+  #qrcode{background:#fff;padding:10px;border-radius:12px;border:1px solid var(--line)}
+  .order{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .order .oh{display:flex;justify-content:space-between;font-size:13px;color:var(--sub)}
+  .order .oi{font-size:14px;margin:6px 0;padding:6px 0;border-top:1px dashed var(--line)}
+  .badge{background:var(--rose-l);color:var(--rose-d);border-radius:6px;padding:1px 6px;font-size:12px}
+  .empty{text-align:center;color:var(--sub);padding:30px 0;font-size:14px}
+  .toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(58,43,48,.92);
+    color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;z-index:99;opacity:0;transition:.25s;pointer-events:none}
+  .toast.on{opacity:1}
+  .filebtn{position:relative;overflow:hidden;display:inline-block}
+  .filebtn input{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer}
+  .stat{display:flex;gap:10px;margin-bottom:12px}
+  .stat .s{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .stat .s b{font-size:22px;color:var(--rose-d);display:block}
+  .stat .s span{font-size:12px;color:var(--sub)}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg .i{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+  .seg .i.on{background:var(--rose);color:#fff;border-color:var(--rose)}
+  .seg .i.so{text-decoration:line-through;opacity:.5}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🌸 买手预购工作台</h1>
+  <p>配置商品 · 生成预购买链接 · 收集意愿 · 导出 Excel</p>
+</div>
+<div class="tabs">
+  <div class="tab on" data-p="p-set">① 设置</div>
+  <div class="tab" data-p="p-prod">② 商品</div>
+  <div class="tab" data-p="p-link">③ 链接</div>
+  <div class="tab" data-p="p-ord">④ 订单</div>
+</div>
+
+<!-- 设置 -->
+<div class="page on" id="p-set">
+  <div class="card">
+    <h3>📋 活动与温馨提示</h3>
+    <label>活动标题</label>
+    <input type="text" id="set-title" placeholder="例如：秋冬新衣预购专场">
+    <label>温馨提示（写进预购买页，买家可见）</label>
+    <textarea id="set-tips" placeholder="例如：本场为预售，不退不换；如有严重瑕疵可私聊客服。下单后请留意发货通知。"></textarea>
+    <label>客服 / 联系方式（微信或电话）</label>
+    <input type="text" id="set-contact" placeholder="例如：微信 xxx 或 电话 138xxxx">
+  </div>
+  <div class="card">
+    <h3>🔗 部署与接收</h3>
+    <label>预购买页地址（部署后填写，留空自动取同目录 buy.html）</label>
+    <input type="url" id="set-base" placeholder="https://你的部署地址/buy.html">
+    <label>工作台后台地址（买手打开的网址，用于生成回执链接；留空自动取同目录 admin.html）</label>
+    <input type="url" id="set-admin" placeholder="https://你的部署地址/admin.html">
+    <label>订单接收接口（可选，留空则用本地收集+导入）</label>
+    <input type="url" id="set-endpoint" placeholder="https://你的表单服务/接口  （如 QuickForm / Formspree 等）">
+    <label>图床 Token（选填，用于国内图床提速/持久）</label>
+    <input type="text" id="set-token" placeholder="如 SM.MS / s.ee 的 API Token（可选）">
+    <div class="hint">填了接口：买家提交会 POST 到该地址，你在对应服务后台看单并导出。<br>留空：订单存在本机，可用「④订单」里的「导入」汇总后导出 Excel（适合先试用）。<br>图床 Token 留空时，手机选图走免 key 的 catbox 国际图床（国内可能稍慢）；填了则走国内图床，更快更稳。</div>
+  </div>
+  <button class="btn block" id="save-set">保存设置</button>
+</div>
+
+<!-- 商品 -->
+<div class="page" id="p-prod">
+  <button class="btn block" id="add-prod" style="margin-bottom:14px">＋ 新增商品</button>
+  <div id="prod-list"></div>
+</div>
+
+<!-- 链接 -->
+<div class="page" id="p-link">
+  <div class="card">
+    <h3>🎯 生成预购买链接</h3>
+    <p class="hint" style="margin-top:0">配置好后点下方按钮生成链接与二维码。买家用微信或浏览器打开即可预购。</p>
+    <button class="btn block" id="gen-link">生成 / 刷新链接</button>
+    <div class="linkbox" style="margin-top:14px">
+      <div id="qrcode"></div>
+      <div style="flex:1;min-width:200px">
+        <label>预购买链接</label>
+        <textarea id="link-out" readonly style="min-height:90px"></textarea>
+        <button class="btn ghost sm" id="copy-link" style="margin-top:6px">复制链接</button>
+      </div>
+    </div>
+    <div class="hint">链接里已包含全部商品配置，无需数据库。商品很多时链接较长属正常，微信可正常打开。</div>
+  </div>
+</div>
+
+<!-- 订单 -->
+<div class="page" id="p-ord">
+  <div class="card">
+    <h3>💾 数据备份 / 恢复</h3>
+    <p class="hint" style="margin-top:0">工作台数据（商品配置 + 全部订单）只存在本机浏览器。换手机/电脑或怕误清缓存前，先「备份到文件」；到新设备点「从文件恢复」即可搬过去。备份文件请妥善保存。</p>
+    <div class="row">
+      <button class="btn ghost" id="backup-btn">💾 备份到文件</button>
+      <button class="btn" id="restore-btn">♻️ 从文件恢复</button>
+      <input type="file" id="restore-file" accept="application/json,.json" style="display:none">
+    </div>
+  </div>
+  <div class="stat">
+    <div class="s"><b id="st-count">0</b><span>订单数</span></div>
+    <div class="s"><b id="st-items">0</b><span>总件数</span></div>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <button class="btn ghost" id="import-btn">📥 导入订单</button>
+    <button class="btn" id="export-btn">📤 导出 Excel</button>
+    <button class="btn danger" id="clear-btn">清空</button>
+  </div>
+  <div id="ord-list"></div>
+  <div class="empty" id="ord-empty">暂无订单。买家提交后这里会显示（需配置接收接口或导入）。</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- 工具 ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const LS='mb_workbench_config_v1', LO='mb_workbench_orders_v1';
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),1600);}
+function enc(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
+function dec(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))));}catch(e){return null;}}
+function uid(){return 'Y'+(Date.now().toString(36).slice(-5)).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();}
+
+/* ---------- 状态 ---------- */
+let CFG={t:'',p:'',c:'',base:'',a:'',ep:'',tk:'',pr:[]};
+let ORD=[];
+
+function load(){try{const v=localStorage.getItem(LS);if(v)CFG=JSON.parse(v);}catch(e){}
+  try{const v=localStorage.getItem(LO);if(v)ORD=JSON.parse(v);}catch(e){}}
+function saveCFG(){localStorage.setItem(LS,JSON.stringify(CFG));}
+function saveORD(){localStorage.setItem(LO,JSON.stringify(ORD));}
+
+/* ---------- 设置页 ---------- */
+function fillSet(){
+  $('#set-title').value=CFG.t||''; $('#set-tips').value=CFG.p||'';
+  $('#set-contact').value=CFG.c||''; $('#set-base').value=CFG.base||'';
+  $('#set-admin').value=CFG.a||''; $('#set-endpoint').value=CFG.ep||'';
+  $('#set-token').value=CFG.tk||'';
+}
+$('#save-set').onclick=()=>{
+  CFG.t=$('#set-title').value.trim(); CFG.p=$('#set-tips').value.trim();
+  CFG.c=$('#set-contact').value.trim(); CFG.base=$('#set-base').value.trim();
+  CFG.a=$('#set-admin').value.trim(); CFG.ep=$('#set-endpoint').value.trim();
+  CFG.tk=$('#set-token').value.trim(); saveCFG(); toast('已保存');
+};
+
+/* ---------- 商品页 ---------- */
+function newProd(){return {id:uid(),n:'',co:'',im:[],cl:[{n:'默认',h:'#db5c7a',i:''}],s:[{n:'S',o:0},{n:'M',o:0},{n:'L',o:0}],sg:'',sc:'',pr:''};}
+function renderProds(){
+  const box=$('#prod-list'); box.innerHTML='';
+  if(!CFG.pr.length){box.innerHTML='<div class="empty">还没有商品，点上方「＋ 新增商品」开始。</div>';return;}
+  CFG.pr.forEach((pd,pi)=>{
+    const el=document.createElement('div'); el.className='pd';
+    el.innerHTML=`
+      <div class="ph"><b>商品 ${pi+1}</b><button class="del" data-del="${pi}">删除</button></div>
+      <label>商品名称</label><input type="text" data-f="n" data-i="${pi}" value="${esc(pd.n)}" placeholder="例如：法式碎花连衣裙">
+      <div class="row">
+        <div><label>货号</label><input type="text" data-f="co" data-i="${pi}" value="${esc(pd.co)}" placeholder="可选，如 A203"></div>
+        <div><label>价格（可选）</label><input type="text" data-f="pr" data-i="${pi}" value="${esc(pd.pr)}" placeholder="如 199"></div>
+      </div>
+      <label>商品图片（可多个链接，每行一个；或用下方选图）</label>
+      <textarea data-f="im" data-i="${pi}" placeholder="粘贴图片网址，每行一个">${esc((pd.im||[]).join('\n'))}</textarea>
+      <div class="filebtn btn ghost sm" style="margin-top:6px">📷 手机/电脑选图 · 一键上传
+        <input type="file" accept="image/*" multiple data-img="${pi}"></div>
+      <div class="hint">选图后自动上传到图床并填好网址，买家用微信打开即可看图。免 key 默认走 catbox（国际，国内可能稍慢）；在①填图床 Token 可换国内图床提速。</div>
+      <label>颜色（可后台随时调整，买家按此选择）</label>
+      <div class="clbox" data-cl="${pi}"></div>
+      <button class="btn ghost sm" data-addcl="${pi}" style="margin-top:4px">＋ 加颜色</button>
+      <label>尺码（逗号分隔；点「售罄」可标记）</label>
+      <div class="seg sbox" data-s="${pi}"></div>
+      <label>尺码推荐说明（买家选尺码时显示）</label>
+      <textarea data-f="sg" data-i="${pi}" placeholder="例如：平时穿 M 选 M；偏胖选大一码。">${esc(pd.sg||'')}</textarea>
+      <label>参考尺码表（可选，每行：尺码:体重范围）</label>
+      <textarea data-f="sc" data-i="${pi}" placeholder="S:80-95斤\nM:95-110斤\nL:110-125斤">${esc(pd.sc||'')}</textarea>
+    `;
+    box.appendChild(el);
+    renderColors(pi); renderSizes(pi);
+  });
+  bindProd();
+}
+function renderColors(pi){
+  const pd=CFG.pr[pi]; const box=$(`.clbox[data-cl="${pi}"]`); box.innerHTML='';
+  pd.cl.forEach((c,ci)=>{
+    const chip=document.createElement('span'); chip.className='chip';
+    chip.innerHTML=`<span class="dot" style="background:${c.h}"></span>
+      <input type="text" value="${esc(c.n)}" data-cln="${pi}-${ci}" style="width:70px;border:none;background:none;padding:0;font-size:13px">
+      <input type="color" value="${c.h}" data-clh="${pi}-${ci}" style="width:24px;height:24px;border:none;background:none;padding:0;vertical-align:middle">
+      <span class="x" data-cld="${pi}-${ci}">×</span>`;
+    box.appendChild(chip);
+  });
+  bindColors();
+}
+function renderSizes(pi){
+  const pd=CFG.pr[pi]; const box=$(`.sbox[data-s="${pi}"]`); box.innerHTML='';
+  pd.s.forEach((s,si)=>{
+    const i=document.createElement('span'); i.className='i'+(s.o?' so':''); i.dataset.si=`${pi}-${si}`;
+    i.textContent=s.n+(s.o?' (售罄)':''); i.onclick=()=>{s.o=+!s.o;renderSizes(pi);};
+    box.appendChild(i);
+  });
+}
+function bindProd(){
+  $$('[data-f]').forEach(inp=>{
+    inp.oninput=()=>{const i=+inp.dataset.i, f=inp.dataset.f, pd=CFG.pr[i];
+      if(f==='im')pd.im=inp.value.split('\n').map(x=>x.trim()).filter(Boolean);
+      else pd[f]=inp.value; saveCFG();};
+  });
+  $$('[data-del]').forEach(b=>b.onclick=()=>{CFG.pr.splice(+b.dataset.del,1);saveCFG();renderProds();});
+  $$('[data-addcl]').forEach(b=>b.onclick=()=>{CFG.pr[+b.dataset.addcl].cl.push({n:'新颜色',h:'#db5c7a',i:''});saveCFG();renderProds();});
+  $$('[data-img]').forEach(inp=>inp.onchange=async e=>{
+    const pi=+inp.dataset.img; const files=[...e.target.files];
+    for(const f of files){
+      toast('上传中…');
+      try{ const url=await uploadImage(f,CFG.tk); CFG.pr[pi].im.push(url); toast('已上传并填好网址'); }
+      catch(err){ const d=await compressToData(f); CFG.pr[pi].im.push(d); toast('上传失败，已转内嵌(仅本机)'); }
+    }
+    saveCFG(); renderProds();
+  });
+}
+function bindColors(){
+  $$('[data-cln]').forEach(i=>i.oninput=()=>{const[a,b]=i.dataset.cln.split('-');CFG.pr[a].cl[b].n=i.value;saveCFG();});
+  $$('[data-clh]').forEach(i=>i.oninput=()=>{const[a,b]=i.dataset.clh.split('-');CFG.pr[a].cl[b].h=i.value;saveCFG();renderColors(a);});
+  $$('[data-cld]').forEach(i=>i.onclick=()=>{const[a,b]=i.dataset.cld.split('-');CFG.pr[a].cl.splice(b,1);saveCFG();renderColors(a);});
+}
+function fileToData(f){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f);});}
+async function uploadImage(file,token){
+  const fd=new FormData(); fd.append('file',file);
+  if(token){ // 国内图床（SM.MS / s.ee 接口）
+    fd.append('format','json');
+    const r=await fetch('https://s.ee/api/v1/file/upload',{method:'POST',headers:{'Authorization':token},body:fd});
+    const j=await r.json(); const u=(j&&(j.data&&j.data.url))||(j&&j.url); if(u)return u; throw new Error('up-fail');
+  }else{ // 免 key 国际图床 catbox
+    fd.append('req','upload'); fd.append('format','json');
+    const r=await fetch('https://catbox.moe/user/api.php',{method:'POST',body:fd});
+    const j=await r.json(); if(j&&j.success)return j.file; throw new Error('up-fail');
+  }
+}
+function compressToData(file){ // 上传失败时的本机内嵌兜底（压缩以减小链接体积）
+  return new Promise(res=>{
+    const img=new Image(); const fr=new FileReader();
+    fr.onload=()=>{img.onload=()=>{const c=document.createElement('canvas');const m=900;
+      let w=img.width,h=img.height; if(w>m){h=Math.round(h*w/m);w=m;}
+      c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      try{res(c.toDataURL('image/jpeg',0.72));}catch(e){res(fr.result);}};img.src=fr.result;};
+    fr.readAsDataURL(file);
+  });
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+$('#add-prod').onclick=()=>{CFG.pr.push(newProd());saveCFG();renderProds();};
+
+/* ---------- 链接页 ---------- */
+function buildConfig(){
+  return {t:CFG.t,p:CFG.p,c:CFG.c,base:CFG.base,a:CFG.a,ep:CFG.ep,
+    pr:CFG.pr.map(pd=>({n:pd.n,co:pd.co,im:pd.im,cl:pd.cl.map(c=>({n:c.n,h:c.h})),
+      s:pd.s.map(s=>({n:s.n,o:s.o})),sg:pd.sg,sc:pd.sc,pr:pd.pr}))};
+}
+$('#gen-link').onclick=()=>{
+  if(!CFG.t && !CFG.pr.length){toast('先填活动标题或加商品');return;}
+  const cfg=buildConfig(); const code=enc(cfg);
+  const base=(CFG.base||location.href.replace(/admin\.html.*$/,'')+'buy.html');
+  const url=base+(base.includes('?')?'&':'?')+'c='+encodeURIComponent(code);
+  $('#link-out').value=url;
+  $('#qrcode').innerHTML=''; new QRCode($('#qrcode'),{text:url,width:150,height:150});
+  toast('链接已生成');
+};
+$('#copy-link').onclick=()=>{const t=$('#link-out');if(!t.value){toast('先生成链接');return;}
+  navigator.clipboard?.writeText(t.value).then(()=>toast('已复制'),()=>{t.select();document.execCommand('copy');toast('已复制');});};
+
+/* ---------- 订单页 ---------- */
+function refreshOrders(){
+  $('#st-count').textContent=ORD.length;
+  const items=ORD.reduce((a,o)=>a+o.items.reduce((b,it)=>b+(+it.qty||0),0),0); $('#st-items').textContent=items;
+  const box=$('#ord-list'); box.innerHTML='';
+  $('#ord-empty').style.display=ORD.length?'none':'block';
+  ORD.slice().reverse().forEach(o=>{
+    const el=document.createElement('div'); el.className='order';
+    el.innerHTML=`<div class="oh"><span class="badge">${esc(o.id)}</span><span>${esc(o.ts)}</span></div>`+
+      o.items.map(it=>`<div class="oi">${esc(it.productName)} · <span class="badge">${esc(it.color)}</span> · 尺码 ${esc(it.size)} · ×${it.qty}${it.code?' · 货号'+esc(it.code):''}</div>`).join('')+
+      `<div class="oi" style="border-top:1px dashed var(--line)">收件人：${esc(o.recipient.name)} ｜ ${esc(o.recipient.phone)}<br>地址：${esc(o.recipient.address)}</div>`+
+      (o.note?`<div class="oi">备注：${esc(o.note)}</div>`:'');
+    box.appendChild(el);
+  });
+}
+$('#export-btn').onclick=()=>{
+  if(!ORD.length){toast('没有订单可导出');return;}
+  const rows=[['订单号','提交时间','商品','货号','颜色','尺码','件数','收件人','电话','地址','备注']];
+  ORD.forEach(o=>o.items.forEach(it=>rows.push([o.id,o.ts,it.productName,it.code||'',it.color,it.size,it.qty,o.recipient.name,o.recipient.phone,o.recipient.address,o.note||''])));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='预购订单_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('已导出 Excel(CSV)');
+};
+$('#clear-btn').onclick=()=>{if(confirm('确定清空全部订单？')){ORD=[];saveORD();refreshOrders();toast('已清空');}};
+$('#backup-btn').onclick=()=>{
+  const data={v:1,ts:new Date().toISOString(),cfg:CFG,orders:ORD};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='买手工作台备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('已备份（配置+'+ORD.length+'笔订单）');
+};
+$('#restore-btn').onclick=()=>$('#restore-file').click();
+$('#restore-file').onchange=async e=>{
+  const f=e.target.files[0]; if(!f){return;}
+  try{
+    const b=JSON.parse(await f.text());
+    if(!b||typeof b.cfg!=='object'){toast('不是有效的备份文件');return;}
+    if(!confirm('恢复将替换当前商品配置，并按单号合并订单（不覆盖新收订单）。确定继续？')){e.target.value='';return;}
+    CFG=b.cfg; saveCFG();
+    const before=ORD.length; const map=new Map(ORD.map(o=>[o.id,o]));
+    (Array.isArray(b.orders)?b.orders:[]).forEach(o=>{if(!map.has(o.id))map.set(o.id,o);});
+    ORD=[...map.values()]; saveORD();
+    fillSet(); renderProds(); refreshOrders();
+    toast('已恢复（新增 '+(ORD.length-before)+' 笔订单）');
+  }catch(err){toast('恢复失败：文件损坏');}
+  e.target.value='';
+};
+$('#import-btn').onclick=()=>{
+  const txt=prompt('把买家提交的「预购回执码」（一行一个，或整段粘贴）粘进来：');
+  if(!txt)return; const codes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+  let n=0; codes.forEach(c=>{const o=decFromCode(c);if(o){ORD.push(o);n++;}});
+  if(n){saveORD();refreshOrders();toast('导入 '+n+' 条');}else toast('没有识别到有效回执');
+};
+function decFromCode(c){ // 支持直接是 base64 配置（买家回执用独立 order 编码）
+  try{const o=dec(c);if(o&&o.items)return o;}catch(e){}
+  return null;
+}
+
+/* ---------- tab 切换 ---------- */
+$$('.tab').forEach(t=>t.onclick=()=>{
+  $$('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  $$('.page').forEach(p=>p.classList.remove('on'));$('#'+t.dataset.p).classList.add('on');
+  if(t.dataset.p==='p-ord')refreshOrders();
+});
+/* 暴露给 buy.html 回执导入用的全局（同域时） */
+window.__MB_ORD=ORD;
+
+load();fillSet();renderProds();refreshOrders();
+
+/* 打开带 ?order= 的回执链接时，自动收录订单到④（零注册、无服务器） */
+(function(){
+  try{
+    const m=location.search.match(/[?&]order=([^&]+)/);
+    if(m){
+      const o=decFromCode(decodeURIComponent(m[1]));
+      if(o){
+        if(!ORD.find(x=>x.id===o.id)){ORD.push(o);saveORD();}
+        toast('已收到 1 笔新订单，已收录到④');
+        history.replaceState(null,'',location.pathname);
+        $$('.tab').forEach(x=>x.classList.remove('on'));
+        const t=$('.tab[data-p="p-ord"]'); if(t)t.classList.add('on');
+        $$('.page').forEach(p=>p.classList.remove('on')); $('#p-ord').classList.add('on');
+        refreshOrders();
+      }else{ toast('回执码无法识别'); }
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
